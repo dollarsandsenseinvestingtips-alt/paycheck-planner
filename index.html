@@ -97,9 +97,77 @@ form.add select{flex:1 1 110px}
 .empty{color:var(--muted);font-size:.92rem;padding:6px 0}
 .foot{display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between;align-items:center;color:var(--muted);font-size:.85rem}
 @media (prefers-reduced-motion:no-preference){.bar span{transition:width .4s ease}}
+
+/* first-run setup */
+.setupwiz{position:fixed;inset:0;z-index:50;background:var(--bg);overflow-y:auto;
+  padding:calc(24px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) calc(32px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.wizin{max-width:520px;margin:0 auto;display:grid;gap:18px}
+.steps{display:flex;gap:6px}
+.steps span{flex:1;height:6px;border-radius:999px;background:var(--line)}
+.steps span.on{background:var(--accent)}
+.wizin h2{font-size:clamp(1.7rem,7vw,2.3rem);font-weight:800;line-height:1.08}
+.wizin .lead{color:var(--muted);margin:0;font-size:1.02rem}
+.field{display:grid;gap:6px;font-weight:600}
+.field input,.field select{font:inherit;font-weight:500;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:12px;padding:12px 14px;min-width:0}
+.field .money{font-family:var(--f-num);font-size:1.6rem}
+.presets{display:flex;gap:8px;flex-wrap:wrap}
+.presets button{font-weight:500;font-size:.92rem;padding:7px 12px;border-radius:999px}
+.wbills{display:grid;gap:8px}
+.wbill{display:grid;grid-template-columns:1fr 6.5em 4.5em auto;gap:8px;align-items:center}
+.wbill input{font:inherit;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;padding:9px 10px;min-width:0;width:100%}
+.wnav{display:flex;gap:10px;justify-content:space-between;align-items:center;flex-wrap:wrap}
+.wnav .primary{padding:12px 20px;font-size:1.05rem}
+.linkish{border:0;background:none;color:var(--muted);text-decoration:underline;padding:6px 0;font-weight:500}
+.reveal{background:var(--ink);color:var(--bg);border-radius:20px;padding:24px 20px;display:grid;gap:8px}
+.reveal .big{font-size:clamp(3rem,15vw,5rem)}
+.err{color:var(--bad);font-size:.9rem;min-height:1.2em}
+@media (prefers-reduced-motion:no-preference){.wizpane{animation:wizin .35s ease both}@keyframes wizin{from{opacity:0;transform:translateY(12px)}}}
 </style>
 
 </head><body>
+<div class="setupwiz" id="wiz" hidden>
+  <div class="wizin">
+    <div class="steps" aria-hidden="true"><span id="st1"></span><span id="st2"></span><span id="st3"></span></div>
+
+    <div class="wizpane" id="w1">
+      <div style="display:grid;gap:16px">
+        <div class="brand"><div class="mark" aria-hidden="true">$</div><strong>Paycheck Planner</strong></div>
+        <h2>Let's find your number.</h2>
+        <p class="lead">Three quick steps. No bank login, no account. Everything stays on this phone.</p>
+        <label class="field">How much is your take-home paycheck?<input class="money" id="wPay" type="number" inputmode="decimal" step="0.01" min="0" placeholder="1,200.00"></label>
+        <label class="field">How often do you get paid?
+          <select id="wFreq"><option value="w">Every week</option><option value="b" selected>Every 2 weeks</option><option value="s">Twice a month (1st &amp; 15th)</option><option value="m">Once a month</option></select></label>
+        <label class="field">When is your next payday?<input id="wNext" type="date"></label>
+        <div class="err" id="w1err" role="alert"></div>
+        <div class="wnav"><button type="button" class="linkish" id="wExample">Look around with example numbers first</button><button type="button" class="primary" id="w1next">Next</button></div>
+      </div>
+    </div>
+
+    <div class="wizpane" id="w2" hidden>
+      <div style="display:grid;gap:16px">
+        <h2>What bills come out every month?</h2>
+        <p class="lead">Add the big ones now. You can add the rest later. Tap a name to start a row.</p>
+        <div class="presets" id="wPresets"></div>
+        <div class="wbills" id="wBills"></div>
+        <button type="button" id="wAddRow" style="justify-self:start">+ Add another bill</button>
+        <div class="wnav"><button type="button" class="linkish" id="w2back">Back</button><button type="button" class="primary" id="w2next">See my number</button></div>
+      </div>
+    </div>
+
+    <div class="wizpane" id="w3" hidden>
+      <div style="display:grid;gap:16px">
+        <h2>Here's your number.</h2>
+        <div class="reveal">
+          <div style="font-size:.78rem;text-transform:uppercase;letter-spacing:.09em;opacity:.75">Safe to spend until payday</div>
+          <div class="big num" id="wSafe">$0</div>
+          <div id="wSafeSub" style="opacity:.85"></div>
+        </div>
+        <p class="lead" id="wTip"></p>
+        <div class="wnav"><button type="button" class="linkish" id="w3back">Back</button><button type="button" class="primary" id="wDone">Open my planner</button></div>
+      </div>
+    </div>
+  </div>
+</div>
 <div class="wrap">
   <header class="top">
     <div class="brand"><div class="mark" aria-hidden="true">$</div><h1>Paycheck Planner <span class="sub" style="font-family:var(--f-body);font-weight:500">by Dollars &amp; Sense</span></h1></div>
@@ -193,6 +261,7 @@ form.add select{flex:1 1 110px}
     <span id="storeNote"></span>
     <span id="restoreMsg" class="sub" role="status"></span>
     <span style="display:flex;gap:8px;flex-wrap:wrap">
+      <button type="button" id="rerun">Setup guide</button>
       <button type="button" id="backup">Back up</button>
       <label class="btn" for="restoreFile" style="display:inline-block">Restore<input id="restoreFile" type="file" accept="application/json,.json" hidden></label>
       <button type="button" id="resetAll">Clear everything</button>
@@ -245,6 +314,56 @@ function boot(){
   const l=lsGet(); if(l) S=l;
   $("storeNote").textContent="Saved on this device only.";
   loaded=true; setSave(S.example?"Example data":"Saved on this device"); render();
+  if(!l) openWizard();
+}
+/* ---- first-run setup ---- */
+const PRESETS=[["Rent",1],["Mortgage",1],["Car payment",15],["Car insurance",20],["Phone",18],["Electric",22],["Internet",10],["Child care",5],["Credit card",25]];
+let wRows=[];
+function openWizard(){
+  $("wiz").hidden=false; document.body.style.overflow="hidden";
+  $("wNext").value=iso(addDays(today(),7)); wRows=[];
+  showStep(1); setTimeout(()=>{try{$("wPay").focus()}catch(e){}},50);
+}
+function closeWizard(){$("wiz").hidden=true;document.body.style.overflow="";window.scrollTo(0,0)}
+function showStep(n){[1,2,3].forEach(i=>{$("w"+i).hidden=i!==n;$("st"+i).classList.toggle("on",i<=n)});$("wiz").scrollTop=0}
+function drawRows(){
+  const w=$("wBills"); w.innerHTML="";
+  if(!wRows.length){w.innerHTML='<div class="empty">No bills yet. Tap one above.</div>'}
+  wRows.forEach((r,i)=>{
+    const d=document.createElement("div");d.className="wbill";
+    d.innerHTML='<input type="text" aria-label="Bill name" placeholder="Bill"><input type="number" inputmode="decimal" step="0.01" min="0" aria-label="Amount" placeholder="Amount"><input type="number" min="1" max="31" aria-label="Due day of month" placeholder="Day"><button type="button" class="x" aria-label="Remove">×</button>';
+    const [n,a,dd]=d.querySelectorAll("input");n.value=r.name;a.value=r.amount||"";dd.value=r.day||"";
+    n.oninput=()=>r.name=n.value;a.oninput=()=>r.amount=a.value;dd.oninput=()=>r.day=dd.value;
+    d.querySelector("button").onclick=()=>{wRows.splice(i,1);drawRows()};
+    w.appendChild(d);
+  });
+  const p=$("wPresets");p.innerHTML="";
+  PRESETS.filter(([n])=>!wRows.some(r=>r.name===n)).forEach(([n,day])=>{const b=document.createElement("button");b.type="button";b.textContent="+ "+n;b.onclick=()=>{wRows.push({name:n,amount:"",day:day});drawRows();const ins=$("wBills").querySelectorAll(".wbill");ins[ins.length-1].querySelectorAll("input")[1].focus()};p.appendChild(b)});
+}
+$("w1next").onclick=()=>{
+  const pay=num($("wPay").value);
+  if(!pay){$("w1err").textContent="Enter your take-home pay to continue.";$("wPay").focus();return}
+  if(!$("wNext").value){$("w1err").textContent="Pick your next payday.";return}
+  $("w1err").textContent=""; drawRows(); showStep(2);
+};
+$("w2back").onclick=()=>showStep(1);
+$("w3back").onclick=()=>showStep(2);
+$("wAddRow").onclick=()=>{wRows.push({name:"",amount:"",day:""});drawRows();const ins=$("wBills").querySelectorAll(".wbill");ins[ins.length-1].querySelector("input").focus()};
+$("w2next").onclick=()=>{
+  S={example:false,pay:{amount:num($("wPay").value),freq:$("wFreq").value,next:$("wNext").value},bills:[],subs:[],goals:[],spend:[]};
+  wRows.forEach(r=>{const a=num(r.amount);if(r.name.trim()&&a)S.bills.push({id:uid(),name:r.name.trim().slice(0,40),amount:a,day:Math.min(31,Math.max(1,parseInt(r.day)||1))})});
+  const c=calc(); countUp($("wSafe"),c.safe);
+  $("wSafeSub").textContent=(c.safe>0?fmt(c.safe/c.days):"$0.00")+" a day for the next "+c.days+(c.days===1?" day":" days");
+  $("wTip").textContent=c.safe<0?"That's tight. Next, add your subscriptions. Most people find one or two they can cancel.":"Next, add your subscriptions and a savings goal. Your number updates as you go.";
+  showStep(3); persist();
+};
+$("wDone").onclick=()=>{closeWizard();render();persist();setSave("Saved on this device")};
+$("wExample").onclick=()=>{S=example();closeWizard();render()};
+function countUp(el,to){
+  const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if(reduce){el.textContent=fmt0(to);return}
+  const t0=performance.now(),d=700;
+  (function f(t){const k=Math.min(1,(t-t0)/d),e=1-Math.pow(1-k,3);el.textContent=fmt0(to*e);if(k<1)requestAnimationFrame(f)})(t0);
 }
 
 /* ---- money math ---- */
@@ -371,10 +490,11 @@ $("goalForm").onsubmit=e=>{e.preventDefault();S.goals.push({id:uid(),name:$("goa
 $("payAmt").oninput=e=>{S.pay.amount=num(e.target.value);change()};
 $("payFreq").onchange=e=>{S.pay.freq=e.target.value;change()};
 $("payNext").onchange=e=>{if(e.target.value){S.pay.next=e.target.value;change()}};
-$("startFresh").onclick=()=>{S={example:false,pay:{amount:0,freq:"b",next:iso(addDays(today(),14))},bills:[],subs:[],goals:[],spend:[]};render();persist();$("payAmt").focus()};
+$("startFresh").onclick=()=>{S={example:false,pay:{amount:0,freq:"b",next:iso(addDays(today(),14))},bills:[],subs:[],goals:[],spend:[]};render();persist();openWizard()};
 $("resetAll").onclick=()=>{$("confirmReset").hidden=false};
 $("resetNo").onclick=()=>{$("confirmReset").hidden=true};
-$("resetYes").onclick=()=>{$("confirmReset").hidden=true;$("startFresh").onclick()};
+$("resetYes").onclick=()=>{$("confirmReset").hidden=true;S={example:false,pay:{amount:0,freq:"b",next:iso(addDays(today(),14))},bills:[],subs:[],goals:[],spend:[]};render();persist();openWizard()};
+$("rerun").onclick=()=>openWizard();
 $("backup").onclick=()=>{
   const blob=new Blob([JSON.stringify(S,null,1)],{type:"application/json"});
   const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="paycheck-planner-backup-"+iso(today())+".json";
