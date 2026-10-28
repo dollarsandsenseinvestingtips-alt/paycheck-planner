@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Paycheck Planner · Dollars &amp; Sense</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Paycheck Planner">
+<meta name="theme-color" content="#0d7a57">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230d7a57'/%3E%3Ctext x='32' y='45' font-size='38' font-family='Arial' font-weight='700' text-anchor='middle' fill='white'%3E$%3C/text%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%230d7a57'/%3E%3Ctext x='32' y='45' font-size='38' font-family='Arial' font-weight='700' text-anchor='middle' fill='white'%3E$%3C/text%3E%3C/svg%3E">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: one column "paycheck ledger" — hero number first, then what's due before payday, then subs, goals, setup. */
+:root{
+  --bg:#eef3f1; --surface:#ffffff; --ink:#10221c; --muted:#5b6f67; --line:#d3dfda;
+  --accent:#0d7a57; --accent-ink:#ffffff; --accent-soft:#d6efe5;
+  --warn:#b26a00; --warn-soft:#fbecd2; --bad:#c0392b; --bad-soft:#f8dcd8;
+  --f-display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --f-body:"Figtree",ui-sans-serif,system-ui,sans-serif;
+  --f-num:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0c1613; --surface:#13211c; --ink:#e6f1ec; --muted:#93a8a0; --line:#24372f;
+  --accent:#3fcf95; --accent-ink:#06140f; --accent-soft:#163b2d;
+  --warn:#f0ad4e; --warn-soft:#3a2c12; --bad:#ff7a6b; --bad-soft:#3d1c18; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0c1613; --surface:#13211c; --ink:#e6f1ec; --muted:#93a8a0; --line:#24372f;
+  --accent:#3fcf95; --accent-ink:#06140f; --accent-soft:#163b2d;
+  --warn:#f0ad4e; --warn-soft:#3a2c12; --bad:#ff7a6b; --bad-soft:#3d1c18; color-scheme:dark}
+*{box-sizing:border-box}
+html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.45;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
+.wrap{max-width:720px;margin:0 auto;display:grid;gap:18px}
+h1,h2{font-family:var(--f-display);text-wrap:balance;margin:0}
+h1{font-size:1.15rem;font-weight:800;letter-spacing:.01em}
+h2{font-size:1.25rem;font-weight:700}
+.num{font-family:var(--f-num);font-variant-numeric:tabular-nums}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px}
+.mark{width:34px;height:34px;border-radius:10px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-family:var(--f-display);font-weight:800;font-size:1.05rem}
+.save{font-size:.8rem;color:var(--muted)}
+.banner{background:var(--warn-soft);color:var(--ink);border:1px solid var(--warn);border-radius:12px;padding:10px 14px;font-size:.92rem;display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:space-between}
+.hero{background:var(--ink);color:var(--bg);border-radius:20px;padding:22px 20px;display:grid;gap:14px}
+.hero .label{font-size:.78rem;text-transform:uppercase;letter-spacing:.09em;opacity:.75}
+.big{font-family:var(--f-display);font-weight:800;font-size:clamp(2.6rem,11vw,4.2rem);line-height:1}
+.big.neg{color:#ff9b8f}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{font-size:.82rem;border:1px solid color-mix(in srgb,var(--bg) 35%,transparent);border-radius:999px;padding:4px 10px}
+.math{display:grid;gap:4px;font-size:.9rem;border-top:1px dashed color-mix(in srgb,var(--bg) 35%,transparent);padding-top:12px}
+.math div{display:flex;justify-content:space-between;gap:10px}
+.math div span:last-child{white-space:nowrap}
+[hidden]{display:none!important}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px;display:grid;gap:12px;min-width:0}
+.card-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.sub{color:var(--muted);font-size:.88rem}
+.rows{display:grid}
+.row{display:grid;grid-template-columns:auto 1fr auto auto;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.row:first-child{border-top:0}
+.row .name{min-width:0;overflow-wrap:anywhere}
+.row .meta{font-size:.8rem;color:var(--muted)}
+.pill{font-size:.72rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;border-radius:999px;padding:3px 8px;white-space:nowrap}
+.p-soon{background:var(--warn-soft);color:var(--warn)}
+.p-later{background:var(--accent-soft);color:var(--accent)}
+.p-cut{background:var(--bad-soft);color:var(--bad)}
+.date{font-family:var(--f-num);font-size:.78rem;color:var(--muted);width:3.4em}
+button,.btn{font:inherit;font-weight:600;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:8px 12px;cursor:pointer}
+button:hover{border-color:var(--accent)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.x{border:0;background:transparent;color:var(--muted);padding:4px 8px;font-size:1.1rem;line-height:1}
+.x:hover{color:var(--bad)}
+form.add{display:flex;gap:8px;flex-wrap:wrap}
+form.add input,form.add select,.setup input,.setup select{font:inherit;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:10px;padding:8px 10px;min-width:0}
+form.add input[type=text]{flex:2 1 140px}
+form.add input[type=number]{flex:1 1 90px;width:90px}
+form.add select{flex:1 1 110px}
+.quick{display:grid;gap:10px}
+.quick .amt{display:flex;gap:8px;flex-wrap:wrap}
+.quick .amt input{flex:1 1 120px;font:inherit;font-family:var(--f-num);font-size:1.2rem;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:10px;padding:10px 12px;min-width:0}
+.cats{display:flex;gap:6px;flex-wrap:wrap}
+.cats button{padding:6px 10px;font-size:.88rem;font-weight:500}
+.cats button[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--ink)}
+.bar{height:10px;border-radius:999px;background:var(--line);overflow:hidden}
+.bar span{display:block;height:100%;background:var(--accent);border-radius:999px}
+.goal{display:grid;gap:6px;padding:10px 0;border-top:1px solid var(--line)}
+.goal:first-child{border-top:0}
+.goal .gl{display:flex;justify-content:space-between;gap:10px;align-items:center}
+.savings{background:var(--bad-soft);border-radius:12px;padding:10px 12px;font-size:.92rem}
+.setup{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.setup label{display:grid;gap:4px;font-size:.85rem;color:var(--muted)}
+.why{display:grid;gap:8px;font-size:.92rem}
+.why li{margin-left:1.1em}
+.empty{color:var(--muted);font-size:.92rem;padding:6px 0}
+.foot{display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between;align-items:center;color:var(--muted);font-size:.85rem}
+@media (prefers-reduced-motion:no-preference){.bar span{transition:width .4s ease}}
+</style>
+
+</head><body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand"><div class="mark" aria-hidden="true">$</div><h1>Paycheck Planner <span class="sub" style="font-family:var(--f-body);font-weight:500">by Dollars &amp; Sense</span></h1></div>
+    <span class="save" id="saveState">Loading…</span>
+  </header>
+
+  <div class="banner" id="exampleBanner" hidden>
+    <span>You're looking at example numbers. Set your paycheck below, or clear them and start fresh.</span>
+    <button id="startFresh" type="button">Clear examples</button>
+  </div>
+
+  <section class="hero" aria-labelledby="safeLabel">
+    <div class="label" id="safeLabel">Safe to spend until payday</div>
+    <div class="big num" id="safe">$0</div>
+    <div class="chips">
+      <span class="chip" id="perDay">$0 a day</span>
+      <span class="chip" id="daysLeft">0 days to payday</span>
+    </div>
+    <div class="math num" id="math"></div>
+  </section>
+
+  <section class="card quick" aria-labelledby="qTitle">
+    <div class="card-head"><h2 id="qTitle">Log spending</h2><span class="sub">No bank login. Type it, tap a category, done.</span></div>
+    <form id="spendForm" class="amt">
+      <input id="spendAmt" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00" aria-label="Amount spent" required>
+      <input id="spendNote" type="text" placeholder="What was it? (optional)" aria-label="Note" style="flex:2 1 160px;font-family:var(--f-body);font-size:1rem">
+      <button class="primary" type="submit">Add</button>
+    </form>
+    <div class="cats" id="cats" role="group" aria-label="Category"></div>
+    <div class="rows" id="spendList"></div>
+  </section>
+
+  <section class="card" aria-labelledby="bTitle">
+    <div class="card-head"><h2 id="bTitle">Due before payday</h2><span class="sub num" id="billsTotal"></span></div>
+    <div class="rows" id="billList"></div>
+    <form class="add" id="billForm">
+      <input type="text" id="billName" placeholder="Bill (rent, car, phone…)" aria-label="Bill name" required>
+      <input type="number" id="billAmt" step="0.01" min="0" placeholder="Amount" aria-label="Bill amount" required>
+      <input type="number" id="billDay" min="1" max="31" placeholder="Due day" aria-label="Due day of month" required>
+      <button type="submit">Add bill</button>
+    </form>
+  </section>
+
+  <section class="card" aria-labelledby="sTitle">
+    <div class="card-head"><h2 id="sTitle">Subscriptions</h2><span class="sub num" id="subsTotal"></span></div>
+    <div class="savings" id="cutBox" hidden></div>
+    <div class="rows" id="subList"></div>
+    <form class="add" id="subForm">
+      <input type="text" id="subName" placeholder="Service" aria-label="Subscription name" required>
+      <input type="number" id="subAmt" step="0.01" min="0" placeholder="Price" aria-label="Price" required>
+      <select id="subCycle" aria-label="Billing cycle"><option value="m">Monthly</option><option value="y">Yearly</option></select>
+      <input type="number" id="subDay" min="1" max="31" placeholder="Bill day" aria-label="Billing day of month" required>
+      <button type="submit">Add</button>
+    </form>
+  </section>
+
+  <section class="card" aria-labelledby="gTitle">
+    <div class="card-head"><h2 id="gTitle">Savings goals</h2><span class="sub">Set aside every paycheck</span></div>
+    <div id="goalList"></div>
+    <form class="add" id="goalForm">
+      <input type="text" id="goalName" placeholder="Goal (emergency fund…)" aria-label="Goal name" required>
+      <input type="number" id="goalTarget" step="1" min="1" placeholder="Target" aria-label="Target amount" required>
+      <input type="number" id="goalPer" step="1" min="0" placeholder="Per paycheck" aria-label="Amount per paycheck" required>
+      <button type="submit">Add goal</button>
+    </form>
+  </section>
+
+  <section class="card" aria-labelledby="pTitle">
+    <div class="card-head"><h2 id="pTitle">Your paycheck</h2><span class="sub">Everything above runs off this</span></div>
+    <div class="setup">
+      <label>Take-home per paycheck<input id="payAmt" type="number" step="0.01" min="0" inputmode="decimal"></label>
+      <label>How often you're paid
+        <select id="payFreq"><option value="w">Every week</option><option value="b">Every 2 weeks</option><option value="s">Twice a month (1st &amp; 15th)</option><option value="m">Once a month</option></select></label>
+      <label>Next payday<input id="payNext" type="date"></label>
+    </div>
+    <div class="sub num" id="monthly"></div>
+  </section>
+
+  <section class="card why" aria-labelledby="wTitle">
+    <h2 id="wTitle">How it works</h2>
+    <ul>
+      <li><b>No bank login.</b> Type what you spend. Nothing to link, nothing to break, and your bank password stays yours.</li>
+      <li><b>One number.</b> What's safe to spend until your next check, after bills, subscriptions and savings.</li>
+      <li><b>Your data stays on your phone.</b> It's saved in this browser only. Tap "Back up" now and then to keep a copy.</li>
+      <li><b>Put it on your home screen.</b> iPhone: Share → Add to Home Screen. Android: menu ⋮ → Add to Home screen.</li>
+    </ul>
+    <p class="sub" style="margin:0">Paycheck Planner is a budgeting tool for personal use. It is not financial, tax or legal advice.</p>
+  </section>
+
+  <footer class="foot">
+    <span id="storeNote"></span>
+    <span id="restoreMsg" class="sub" role="status"></span>
+    <span style="display:flex;gap:8px;flex-wrap:wrap">
+      <button type="button" id="backup">Back up</button>
+      <label class="btn" for="restoreFile" style="display:inline-block">Restore<input id="restoreFile" type="file" accept="application/json,.json" hidden></label>
+      <button type="button" id="resetAll">Clear everything</button>
+    </span>
+  </footer>
+  <div class="banner" id="confirmReset" hidden>
+    <span>Delete all your bills, subscriptions, goals and spending?</span>
+    <span style="display:flex;gap:8px"><button type="button" id="resetYes" class="primary">Delete all</button><button type="button" id="resetNo">Keep</button></span>
+  </div>
+</div>
+
+<script>
+(function(){
+const CATS=["Food","Gas","Groceries","Fun","Shopping","Kids","Other"];
+const LSKEY="ds-budget-v1";
+const fmt=n=>(n<0?"−":"")+"$"+Math.abs(n).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmt0=n=>(n<0?"−":"")+"$"+Math.round(Math.abs(n)).toLocaleString("en-US");
+const $=id=>document.getElementById(id);
+const uid=()=>Math.random().toString(36).slice(2,10);
+const today=()=>{const d=new Date();d.setHours(0,0,0,0);return d};
+const iso=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+const parse=s=>{const [y,m,d]=s.split("-").map(Number);return new Date(y,m-1,d)};
+function addDays(d,n){const x=new Date(d);x.setDate(x.getDate()+n);return x}
+function addMonths(d,n){const x=new Date(d);const day=x.getDate();x.setDate(1);x.setMonth(x.getMonth()+n);x.setDate(Math.min(day,new Date(x.getFullYear(),x.getMonth()+1,0).getDate()));return x}
+
+function example(){
+  const t=today(); const next=addDays(t,9);
+  return {example:true,pay:{amount:1450,freq:"b",next:iso(next)},
+    bills:[{id:uid(),name:"Rent",amount:1100,day:1},{id:uid(),name:"Car payment",amount:385,day:12},{id:uid(),name:"Phone",amount:85,day:18},{id:uid(),name:"Electric",amount:140,day:22},{id:uid(),name:"Car insurance",amount:160,day:27}],
+    subs:[{id:uid(),name:"Netflix",amount:17.99,cycle:"m",day:9,cut:false},{id:uid(),name:"Spotify",amount:11.99,cycle:"m",day:14,cut:false},{id:uid(),name:"Gym",amount:39.99,cycle:"m",day:5,cut:true},{id:uid(),name:"Amazon Prime",amount:139,cycle:"y",day:20,cut:false}],
+    goals:[{id:uid(),name:"Emergency fund",target:1000,saved:320,per:50},{id:uid(),name:"Christmas",target:500,saved:180,per:40}],
+    spend:[{id:uid(),date:iso(addDays(t,-1)),amount:23.5,cat:"Food",note:"Lunch"},{id:uid(),date:iso(addDays(t,-2)),amount:48,cat:"Gas",note:""},{id:uid(),date:iso(addDays(t,-3)),amount:86.4,cat:"Groceries",note:"Walmart"}]};
+}
+let S=example(); let cat="Food";
+
+/* ---- storage: private per-person db doc, browser storage as fallback ---- */
+let saveTimer=null, loaded=false;
+function setSave(t){$("saveState").textContent=t}
+function lsGet(){try{const v=localStorage.getItem(LSKEY);return v?JSON.parse(v):null}catch(e){return null}}
+function lsSet(v){try{localStorage.setItem(LSKEY,JSON.stringify(v));return true}catch(e){return false}}
+function persist(){
+  if(!loaded) return;
+  clearTimeout(saveTimer); setSave("Saving…");
+  saveTimer=setTimeout(()=>{
+    const body=JSON.parse(JSON.stringify(S));
+    setSave(lsSet(body)?"Saved on this device":"Not saved (storage blocked)");
+  },500);
+}
+function boot(){
+  const l=lsGet(); if(l) S=l;
+  $("storeNote").textContent="Saved on this device only.";
+  loaded=true; setSave(S.example?"Example data":"Saved on this device"); render();
+}
+
+/* ---- money math ---- */
+function periodStart(){
+  const n=parse(S.pay.next);
+  return {w:()=>addDays(n,-7),b:()=>addDays(n,-14),s:()=>addDays(n,-15),m:()=>addMonths(n,-1)}[S.pay.freq]();
+}
+function perMonth(){return S.pay.amount*({w:52/12,b:26/12,s:2,m:1}[S.pay.freq])}
+function occurrences(day,from,to){ // dates of a monthly due-day in [from,to)
+  const out=[]; let m=new Date(from.getFullYear(),from.getMonth(),1);
+  while(m<to){const last=new Date(m.getFullYear(),m.getMonth()+1,0).getDate();const d=new Date(m.getFullYear(),m.getMonth(),Math.min(day,last));if(d>=from&&d<to)out.push(d);m=new Date(m.getFullYear(),m.getMonth()+1,1)}
+  return out;
+}
+function rollPayday(){ // move next payday forward if it has passed
+  let n=parse(S.pay.next); const t=today(); let moved=false;
+  while(n<=addDays(t,-1)){n={w:()=>addDays(n,7),b:()=>addDays(n,14),s:()=>addDays(n,15),m:()=>addMonths(n,1)}[S.pay.freq]();moved=true}
+  if(moved){S.pay.next=iso(n)}
+}
+function calc(){
+  rollPayday();
+  const t=today(), next=parse(S.pay.next), start=periodStart();
+  const from=t<start?start:t;
+  const due=[];
+  S.bills.forEach(b=>occurrences(b.day,from,next).forEach(d=>due.push({...b,date:d,kind:"bill"})));
+  S.subs.filter(s=>!s.cut).forEach(s=>{
+    if(s.cycle==="m") occurrences(s.day,from,next).forEach(d=>due.push({...s,date:d,kind:"sub"}));
+  });
+  due.sort((a,b)=>a.date-b.date);
+  const dueTotal=due.reduce((a,b)=>a+b.amount,0);
+  const yearlySet=S.subs.filter(s=>!s.cut&&s.cycle==="y").reduce((a,s)=>a+s.amount/({w:52,b:26,s:24,m:12}[S.pay.freq]),0);
+  const goals=S.goals.filter(g=>g.saved<g.target).reduce((a,g)=>a+Math.min(g.per,g.target-g.saved),0);
+  const spent=S.spend.filter(x=>parse(x.date)>=start&&parse(x.date)<next).reduce((a,x)=>a+x.amount,0);
+  const safe=S.pay.amount-dueTotal-yearlySet-goals-spent;
+  const days=Math.max(1,Math.round((next-t)/864e5));
+  return {due,dueTotal,yearlySet,goals,spent,safe,days,next,start};
+}
+
+/* ---- render ---- */
+function render(){
+  const c=calc();
+  $("exampleBanner").hidden=!S.example;
+  const safe=$("safe"); safe.textContent=fmt0(c.safe); safe.classList.toggle("neg",c.safe<0);
+  $("perDay").textContent=(c.safe>0?fmt(c.safe/c.days):"$0.00")+" a day";
+  $("daysLeft").textContent=c.days+(c.days===1?" day":" days")+" to payday ("+c.next.toLocaleDateString("en-US",{month:"short",day:"numeric"})+")";
+  $("math").innerHTML="";
+  [["Paycheck",S.pay.amount],["Bills & subs before payday",-c.dueTotal],["Yearly subs, set aside",-c.yearlySet],["Savings goals",-c.goals],["Spent this paycheck",-c.spent]]
+    .filter(([k,v],i)=>i===0||v!==0).forEach(([k,v])=>{const d=document.createElement("div");d.innerHTML="<span></span><span></span>";d.children[0].textContent=k;d.children[1].textContent=(v<0?"−\u00a0":"")+fmt(Math.abs(v));$("math").appendChild(d)});
+
+  // categories
+  const cw=$("cats"); cw.innerHTML="";
+  CATS.forEach(k=>{const b=document.createElement("button");b.type="button";b.textContent=k;b.setAttribute("aria-pressed",String(k===cat));b.onclick=()=>{cat=k;render()};cw.appendChild(b)});
+
+  // spending list
+  const sl=$("spendList"); sl.innerHTML="";
+  const recent=[...S.spend].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,6);
+  if(!recent.length) sl.innerHTML='<div class="empty">Nothing logged this paycheck yet.</div>';
+  recent.forEach(x=>{const r=row(parse(x.date),x.note||x.cat,x.note?x.cat:"",fmt(x.amount),null,()=>{S.spend=S.spend.filter(y=>y.id!==x.id);change()});sl.appendChild(r)});
+
+  // bills due
+  const bl=$("billList"); bl.innerHTML="";
+  $("billsTotal").textContent=fmt(c.dueTotal)+" total";
+  if(!c.due.length) bl.innerHTML='<div class="empty">Nothing due before your next payday.</div>';
+  const t=today();
+  c.due.forEach(b=>{const soon=(b.date-t)/864e5<=3;
+    const r=row(b.date,b.name,b.kind==="sub"?"Subscription":"Bill · due the "+ord(b.day),fmt(b.amount),soon?["Due soon","p-soon"]:["Upcoming","p-later"],
+      ()=>{if(b.kind==="bill")S.bills=S.bills.filter(y=>y.id!==b.id);else S.subs=S.subs.filter(y=>y.id!==b.id);change()});bl.appendChild(r)});
+  const later=S.bills.filter(b=>!c.due.some(d=>d.id===b.id));
+  if(later.length){const m=document.createElement("div");m.className="sub";m.style.paddingTop="8px";m.textContent="After payday: "+later.map(b=>b.name+" ("+fmt0(b.amount)+", the "+ord(b.day)+")").join(", ");bl.appendChild(m)}
+
+  // subs
+  const su=$("subList"); su.innerHTML="";
+  const yearOf=s=>s.cycle==="m"?s.amount*12:s.amount;
+  const keepYear=S.subs.filter(s=>!s.cut).reduce((a,s)=>a+yearOf(s),0);
+  const cutYear=S.subs.filter(s=>s.cut).reduce((a,s)=>a+yearOf(s),0);
+  $("subsTotal").textContent=fmt0(keepYear)+" a year";
+  $("cutBox").hidden=!cutYear; $("cutBox").textContent="Cancel the ones marked and you keep "+fmt0(cutYear)+" a year ("+fmt(cutYear/12)+" a month).";
+  if(!S.subs.length) su.innerHTML='<div class="empty">Add the apps and services that charge you.</div>';
+  S.subs.forEach(s=>{const r=row(null,s.name,(s.cycle==="m"?fmt(s.amount)+"/mo":fmt(s.amount)+"/yr")+" · bills the "+ord(s.day),fmt0(yearOf(s))+"/yr",s.cut?["Cancel","p-cut"]:null,()=>{S.subs=S.subs.filter(y=>y.id!==s.id);change()});
+    const tg=document.createElement("button");tg.type="button";tg.textContent=s.cut?"Keep":"Cancel?";tg.style.fontSize=".8rem";tg.style.padding="4px 8px";tg.onclick=()=>{s.cut=!s.cut;change()};
+    r.children[0].replaceWith(tg); su.appendChild(r)});
+
+  // goals
+  const gl=$("goalList"); gl.innerHTML="";
+  if(!S.goals.length) gl.innerHTML='<div class="empty">Add something to save toward. Even $20 a paycheck adds up.</div>';
+  S.goals.forEach(g=>{const p=Math.min(100,g.saved/g.target*100);const left=Math.max(0,g.target-g.saved);const checks=g.per>0?Math.ceil(left/g.per):null;
+    const el=document.createElement("div");el.className="goal";
+    el.innerHTML='<div class="gl"><b></b><span style="display:flex;gap:6px;align-items:center"><span class="num"></span><button type="button" class="x" aria-label="Delete goal">×</button></span></div><div class="bar"><span></span></div><div class="gl sub"><span></span><button type="button">+ Add this paycheck’s</button></div>';
+    el.querySelector("b").textContent=g.name;
+    el.querySelector(".gl .num").textContent=fmt0(g.saved)+" / "+fmt0(g.target);
+    el.querySelector(".bar span").style.width=p+"%";
+    el.querySelectorAll(".gl")[1].querySelector("span").textContent=left?fmt0(g.per)+" a paycheck · "+(checks?checks+" more paychecks":"set an amount"):"Goal reached";
+    const [del,addb]=el.querySelectorAll("button");
+    del.onclick=()=>{S.goals=S.goals.filter(y=>y.id!==g.id);change()};
+    addb.hidden=!left; addb.onclick=()=>{g.saved=Math.min(g.target,g.saved+g.per);change()};
+    gl.appendChild(el)});
+
+  // paycheck
+  if(document.activeElement?.id!=="payAmt") $("payAmt").value=S.pay.amount;
+  $("payFreq").value=S.pay.freq; if(document.activeElement?.id!=="payNext") $("payNext").value=S.pay.next;
+  $("monthly").textContent="About "+fmt0(perMonth())+" a month coming in.";
+}
+function ord(n){const s=["th","st","nd","rd"],v=n%100;return n+(s[(v-20)%10]||s[v]||s[0])}
+function row(date,name,meta,amount,pill,onDel){
+  const r=document.createElement("div");r.className="row";
+  r.innerHTML='<span class="date"></span><div class="name"><div></div><div class="meta"></div></div><span class="num"></span><span style="display:flex;align-items:center;gap:6px"></span>';
+  r.children[0].textContent=date?date.toLocaleDateString("en-US",{month:"short",day:"numeric"}):"";
+  r.children[1].children[0].textContent=name; r.children[1].children[1].textContent=meta;
+  r.children[2].textContent=amount;
+  const end=r.children[3];
+  if(pill){const p=document.createElement("span");p.className="pill "+pill[1];p.textContent=pill[0];end.appendChild(p)}
+  const x=document.createElement("button");x.type="button";x.className="x";x.setAttribute("aria-label","Delete "+name);x.textContent="×";x.onclick=onDel;end.appendChild(x);
+  return r;
+}
+function change(){ if(S.example){S.example=false} render(); persist(); }
+
+/* ---- inputs ---- */
+const num=v=>Math.max(0,parseFloat(v)||0);
+$("spendForm").onsubmit=e=>{e.preventDefault();const a=num($("spendAmt").value);if(!a)return;
+  S.spend.push({id:uid(),date:iso(today()),amount:a,cat,note:$("spendNote").value.trim().slice(0,60)});
+  S.spend=S.spend.filter(x=>parse(x.date)>=addMonths(today(),-3)); $("spendAmt").value="";$("spendNote").value="";change()};
+$("billForm").onsubmit=e=>{e.preventDefault();S.bills.push({id:uid(),name:$("billName").value.trim().slice(0,40),amount:num($("billAmt").value),day:Math.min(31,Math.max(1,parseInt($("billDay").value)||1))});e.target.reset();change()};
+$("subForm").onsubmit=e=>{e.preventDefault();S.subs.push({id:uid(),name:$("subName").value.trim().slice(0,40),amount:num($("subAmt").value),cycle:$("subCycle").value,day:Math.min(31,Math.max(1,parseInt($("subDay").value)||1)),cut:false});e.target.reset();change()};
+$("goalForm").onsubmit=e=>{e.preventDefault();S.goals.push({id:uid(),name:$("goalName").value.trim().slice(0,40),target:num($("goalTarget").value),saved:0,per:num($("goalPer").value)});e.target.reset();change()};
+$("payAmt").oninput=e=>{S.pay.amount=num(e.target.value);change()};
+$("payFreq").onchange=e=>{S.pay.freq=e.target.value;change()};
+$("payNext").onchange=e=>{if(e.target.value){S.pay.next=e.target.value;change()}};
+$("startFresh").onclick=()=>{S={example:false,pay:{amount:0,freq:"b",next:iso(addDays(today(),14))},bills:[],subs:[],goals:[],spend:[]};render();persist();$("payAmt").focus()};
+$("resetAll").onclick=()=>{$("confirmReset").hidden=false};
+$("resetNo").onclick=()=>{$("confirmReset").hidden=true};
+$("resetYes").onclick=()=>{$("confirmReset").hidden=true;$("startFresh").onclick()};
+$("backup").onclick=()=>{
+  const blob=new Blob([JSON.stringify(S,null,1)],{type:"application/json"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="paycheck-planner-backup-"+iso(today())+".json";
+  document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);
+  $("restoreMsg").textContent="Backup saved to your downloads.";
+};
+$("restoreFile").onchange=e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=()=>{try{const d=JSON.parse(r.result);if(!d.pay||!Array.isArray(d.bills))throw 0;S=d;S.example=false;render();persist();$("restoreMsg").textContent="Backup restored."}catch(err){$("restoreMsg").textContent="That file isn't a Paycheck Planner backup."}};
+  r.readAsText(f); e.target.value="";
+};
+boot();
+})();
+</script>
+
+</body></html>
