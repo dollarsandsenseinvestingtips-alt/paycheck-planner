@@ -6,8 +6,10 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Paycheck Planner">
 <meta name="theme-color" content="#0d7a57">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230d7a57'/%3E%3Ctext x='32' y='45' font-size='38' font-family='Arial' font-weight='700' text-anchor='middle' fill='white'%3E$%3C/text%3E%3C/svg%3E">
-<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%230d7a57'/%3E%3Ctext x='32' y='45' font-size='38' font-family='Arial' font-weight='700' text-anchor='middle' fill='white'%3E$%3C/text%3E%3C/svg%3E">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
@@ -122,6 +124,10 @@ form.add select{flex:1 1 110px}
 .reveal .big{font-size:clamp(3rem,15vw,5rem)}
 .err{color:var(--bad);font-size:.9rem;min-height:1.2em}
 @media (prefers-reduced-motion:no-preference){.wizpane{animation:wizin .35s ease both}@keyframes wizin{from{opacity:0;transform:translateY(12px)}}}
+.install{display:grid;gap:8px;padding:14px 16px;border:1.5px dashed var(--accent);border-radius:14px;background:var(--accent-soft);color:var(--ink)}
+.banner.install{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.banner.install[hidden],.install[hidden],.installBtn[hidden]{display:none}
+.installHow{color:var(--muted)}
 </style>
 
 </head><body>
@@ -163,6 +169,11 @@ form.add select{flex:1 1 110px}
           <div id="wSafeSub" style="opacity:.85"></div>
         </div>
         <p class="lead" id="wTip"></p>
+        <div class="install" id="wInstall" hidden>
+          <strong>Put it on your home screen</strong>
+          <span class="installHow"></span>
+          <button type="button" class="primary installBtn" hidden>Install app</button>
+        </div>
         <div class="wnav"><button type="button" class="linkish" id="w3back">Back</button><button type="button" class="primary" id="wDone">Open my planner</button></div>
       </div>
     </div>
@@ -174,6 +185,11 @@ form.add select{flex:1 1 110px}
     <span class="save" id="saveState">Loading…</span>
   </header>
 
+  <div class="banner install" id="mInstall" hidden>
+    <span><strong>Make it an app.</strong> <span class="installHow"></span></span>
+    <button type="button" class="installBtn" hidden>Install</button>
+    <button type="button" class="linkish" id="mInstallX" aria-label="Dismiss">Not now</button>
+  </div>
   <div class="banner" id="exampleBanner" hidden>
     <span>You're looking at example numbers. Set your paycheck below, or clear them and start fresh.</span>
     <button id="startFresh" type="button">Clear examples</button>
@@ -324,7 +340,7 @@ function openWizard(){
   $("wNext").value=iso(addDays(today(),7)); wRows=[];
   showStep(1); setTimeout(()=>{try{$("wPay").focus()}catch(e){}},50);
 }
-function closeWizard(){$("wiz").hidden=true;document.body.style.overflow="";window.scrollTo(0,0)}
+function closeWizard(){$("wiz").hidden=true;document.body.style.overflow="";window.scrollTo(0,0);if(typeof drawInstall==="function")drawInstall()}
 function showStep(n){[1,2,3].forEach(i=>{$("w"+i).hidden=i!==n;$("st"+i).classList.toggle("on",i<=n)});$("wiz").scrollTop=0}
 function drawRows(){
   const w=$("wBills"); w.innerHTML="";
@@ -507,7 +523,31 @@ $("restoreFile").onchange=e=>{
   r.onload=()=>{try{const d=JSON.parse(r.result);if(!d.pay||!Array.isArray(d.bills))throw 0;S=d;S.example=false;render();persist();$("restoreMsg").textContent="Backup restored."}catch(err){$("restoreMsg").textContent="That file isn't a Paycheck Planner backup."}};
   r.readAsText(f); e.target.value="";
 };
+
+/* ---- home-screen install ---- */
+let deferredPrompt=null;
+const standalone=()=>matchMedia("(display-mode: standalone)").matches||navigator.standalone===true;
+const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+function installText(){
+  if(deferredPrompt) return "Install it and it opens like any other app, even with no signal.";
+  if(isIOS) return "In Safari, tap the Share button (square with the arrow), then “Add to Home Screen.”";
+  return "Open your browser menu (⋮) and tap “Add to Home screen” or “Install app.”";
+}
+function dismissed(){try{return localStorage.getItem("pp-install-x")==="1"}catch(e){return false}}
+function drawInstall(){
+  const on=!standalone();
+  document.querySelectorAll(".installHow").forEach(el=>el.textContent=installText());
+  document.querySelectorAll(".installBtn").forEach(b=>b.hidden=!deferredPrompt);
+  $("wInstall").hidden=!on;
+  $("mInstall").hidden=!on||dismissed()||!$("wiz").hidden;
+}
+window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredPrompt=e;drawInstall()});
+window.addEventListener("appinstalled",()=>{deferredPrompt=null;drawInstall()});
+document.querySelectorAll(".installBtn").forEach(b=>b.onclick=async()=>{if(!deferredPrompt)return;deferredPrompt.prompt();try{await deferredPrompt.userChoice}catch(e){}deferredPrompt=null;drawInstall()});
+$("mInstallX").onclick=()=>{try{localStorage.setItem("pp-install-x","1")}catch(e){}drawInstall()};
+if("serviceWorker" in navigator&&location.protocol.startsWith("http")){window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}))}
 boot();
+drawInstall();
 })();
 </script>
 
